@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LAN Speed Check</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <h1>LAN speed check</h1>
+      </section>
+
+      <section class="metrics-grid">
+        <article class="panel metric-card">
+          <div class="gauge-head">
+            <p class="label">download</p>
+            <p id="downloadGaugeCeiling" class="gauge-ceiling">0.00 Gbps ceiling</p>
+          </div>
+          <div class="gauge-shell">
+            <svg class="gauge-svg" viewBox="0 0 240 160" aria-hidden="true">
+              <path class="gauge-track" d="M 30 130 A 90 90 0 0 1 210 130" pathLength="100"></path>
+              <path id="downloadGaugeFill" class="gauge-fill" d="M 30 130 A 90 90 0 0 1 210 130" pathLength="100"></path>
+              <line id="downloadGaugeNeedle" class="gauge-needle" x1="120" y1="130" x2="120" y2="54"></line>
+              <circle class="gauge-cap" cx="120" cy="130" r="8"></circle>
+            </svg>
+            <div class="gauge-readout">
+              <p id="downloadValue" class="metric-value">--</p>
+              <p id="downloadDetail" class="metric-detail">Waiting for measurement</p>
+            </div>
+          </div>
+        </article>
+        <article class="panel metric-card">
+          <div class="gauge-head">
+            <p class="label">upload</p>
+            <p id="uploadGaugeCeiling" class="gauge-ceiling">0.00 Gbps ceiling</p>
+          </div>
+          <div class="gauge-shell">
+            <svg class="gauge-svg" viewBox="0 0 240 160" aria-hidden="true">
+              <path class="gauge-track" d="M 30 130 A 90 90 0 0 1 210 130" pathLength="100"></path>
+              <path id="uploadGaugeFill" class="gauge-fill gauge-fill-warn" d="M 30 130 A 90 90 0 0 1 210 130" pathLength="100"></path>
+              <line id="uploadGaugeNeedle" class="gauge-needle gauge-needle-warn" x1="120" y1="130" x2="120" y2="54"></line>
+              <circle class="gauge-cap" cx="120" cy="130" r="8"></circle>
+            </svg>
+            <div class="gauge-readout">
+              <p id="uploadValue" class="metric-value metric-value-warn">--</p>
+              <p id="uploadDetail" class="metric-detail">Waiting for measurement</p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel summary-panel">
+        <div class="summary-head">
+          <div>
+            <p class="label">verdict</p>
+            <p id="verdictText" class="verdict-text">Running benchmark…</p>
+          </div>
+          <button id="rerunButton" class="rerun-button" type="button">rerun test</button>
+        </div>
+        <div id="summaryStats" class="summary-stats"></div>
+      </section>
+
+      <section class="panel comparison-panel">
+        <div class="comparison-head">
+          <p class="label">comparison matrix</p>
+          <p class="comparison-caption">How this link stacks up against common network classes</p>
+        </div>
+        <div id="comparisonTable" class="comparison-table"></div>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

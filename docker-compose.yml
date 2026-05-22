@@ -1,0 +1,14 @@
+services:
+  speed-lan-check:
+    build: .
+    container_name: speed-lan-check
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DOWNLOAD_CHUNK_SIZE: 65536
+      DOWNLOAD_CHUNKS: 256
+      UPLOAD_PAYLOAD_BYTES: 4194304
+      UPLOAD_PASSES: 3
+      UPLOAD_LIMIT_MB: 128
+    restart: unless-stopped

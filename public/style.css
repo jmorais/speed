@@ -1,0 +1,349 @@
+:root {
+  color-scheme: dark;
+  --bg: #07111a;
+  --bg-accent: #0d1c2a;
+  --panel: rgba(7, 17, 26, 0.78);
+  --panel-strong: rgba(8, 21, 32, 0.94);
+  --line: rgba(128, 182, 213, 0.2);
+  --text: #dbf2ff;
+  --muted: #7ea3b9;
+  --signal: #7bf7cf;
+  --warn: #ffd479;
+  --shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(17, 118, 119, 0.24), transparent 24%),
+    radial-gradient(circle at bottom left, rgba(22, 76, 141, 0.3), transparent 28%),
+    linear-gradient(180deg, #08131d 0%, #050c13 100%);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(140, 214, 255, 0.04) 1px, transparent 1px);
+  background-size: 100% 3px;
+  opacity: 0.3;
+}
+
+.shell {
+  width: min(1080px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0 64px;
+}
+
+.hero {
+  padding: 18px 0 24px;
+}
+
+.eyebrow,
+.label,
+.comparison-caption,
+.metric-detail,
+.lede,
+.verdict-text,
+.summary-item-value,
+.comparison-value,
+.comparison-note {
+  color: var(--muted);
+}
+
+.eyebrow,
+.label {
+  margin: 0 0 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+h1 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.5rem, 6vw, 4.8rem);
+  line-height: 0.95;
+}
+
+.lede {
+  margin: 16px 0 0;
+  max-width: 720px;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.panel {
+  position: relative;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(123, 247, 207, 0.08), transparent 28%, transparent 72%, rgba(123, 247, 207, 0.03));
+  pointer-events: none;
+}
+
+.summary-panel,
+.comparison-panel {
+  padding: 22px;
+  margin-top: 18px;
+}
+
+.verdict-text {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+.gauge-ceiling {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.metric-card {
+  padding: 24px 22px 22px;
+}
+
+.gauge-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gauge-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.gauge-svg {
+  width: 100%;
+  max-width: 360px;
+  overflow: visible;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
+}
+
+.gauge-track,
+.gauge-fill {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 14;
+}
+
+.gauge-track {
+  stroke: rgba(126, 163, 185, 0.16);
+}
+
+.gauge-fill {
+  stroke: var(--signal);
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 520ms ease;
+}
+
+.gauge-fill-warn {
+  stroke: #75b8ff;
+}
+
+.gauge-needle {
+  transform-box: view-box;
+  transform-origin: 120px 130px;
+  stroke: var(--signal);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: transform 520ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+.gauge-needle-warn {
+  stroke: #75b8ff;
+}
+
+.gauge-cap {
+  fill: var(--text);
+}
+
+.gauge-readout {
+  text-align: center;
+  width: 100%;
+}
+
+.metric-value {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.6rem, 7vw, 4.6rem);
+  line-height: 1;
+  color: var(--signal);
+}
+
+.metric-value-warn {
+  color: #75b8ff;
+}
+
+.metric-detail {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+}
+
+.summary-head,
+.comparison-head,
+.summary-stats,
+.comparison-row {
+  display: grid;
+  gap: 16px;
+}
+
+.summary-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.rerun-button {
+  appearance: none;
+  border: 1px solid rgba(123, 247, 207, 0.4);
+  background: rgba(123, 247, 207, 0.08);
+  color: var(--text);
+  font: inherit;
+  text-transform: lowercase;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.rerun-button:hover,
+.rerun-button:focus-visible {
+  background: rgba(123, 247, 207, 0.14);
+  transform: translateY(-1px);
+}
+
+.summary-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.summary-item {
+  padding: 14px 16px;
+  background: var(--panel-strong);
+  border: 1px solid rgba(128, 182, 213, 0.12);
+  border-radius: 14px;
+}
+
+.summary-item-label {
+  margin: 0 0 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.summary-item-value {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.comparison-caption {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.comparison-table {
+  margin-top: 18px;
+}
+
+.comparison-row {
+  grid-template-columns: minmax(0, 1.4fr) 1fr 1fr;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid rgba(128, 182, 213, 0.14);
+}
+
+.comparison-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.comparison-name {
+  color: var(--text);
+  margin: 0;
+}
+
+.comparison-note,
+.comparison-value {
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+}
+
+.comparison-result {
+  justify-self: end;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  border: 1px solid transparent;
+}
+
+.comparison-result.pass {
+  color: var(--signal);
+  border-color: rgba(123, 247, 207, 0.26);
+  background: rgba(123, 247, 207, 0.08);
+}
+
+.comparison-result.partial {
+  color: var(--warn);
+  border-color: rgba(255, 212, 121, 0.26);
+  background: rgba(255, 212, 121, 0.08);
+}
+
+.comparison-result.fail {
+  color: #ff9e8f;
+  border-color: rgba(255, 158, 143, 0.22);
+  background: rgba(255, 158, 143, 0.08);
+}
+
+@media (max-width: 760px) {
+  .shell {
+    width: min(100% - 20px, 1080px);
+    padding-top: 20px;
+  }
+
+  .metrics-grid,
+  .summary-stats,
+  .comparison-row,
+  .summary-head {
+    grid-template-columns: 1fr;
+  }
+
+  .gauge-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .comparison-result {
+    justify-self: start;
+  }
+}

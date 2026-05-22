@@ -7,8 +7,8 @@ services:
     environment:
       PORT: 3000
       DOWNLOAD_CHUNK_SIZE: 65536
-      DOWNLOAD_CHUNKS: 256
-      UPLOAD_PAYLOAD_BYTES: 4194304
-      UPLOAD_PASSES: 3
-      UPLOAD_LIMIT_MB: 128
+      DOWNLOAD_CHUNKS: 4000
+      UPLOAD_PAYLOAD_BYTES: 262144000
+      UPLOAD_PASSES: 1
+      UPLOAD_LIMIT_MB: 512
     restart: unless-stopped

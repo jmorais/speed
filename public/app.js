@@ -16,7 +16,7 @@ const elements = {
 };
 
 let configCache = null;
-const FIXED_TEST_BYTES = 100 * 1024 * 1024;
+const FIXED_TEST_BYTES = 250 * 1024 * 1024;
 
 function bytesToMiB(bytes) {
   return bytes / (1024 * 1024);
@@ -174,48 +174,113 @@ async function loadConfig() {
   return configCache;
 }
 
-async function measureDownload(requestedBytes) {
-  const startedAt = performance.now();
+async function measureDownload(requestedBytes, standards) {
   const response = await fetch(`/api/download?bytes=${requestedBytes}&r=${Date.now()}`, {
     cache: 'no-store'
   });
-  const buffer = await response.arrayBuffer();
-  const seconds = (performance.now() - startedAt) / 1000;
-  const bytes = Math.max(buffer.byteLength, requestedBytes);
-  const mbps = (bytes * 8) / seconds / 1_000_000;
 
-  return {
-    mbps,
-    seconds,
-    bytes
-  };
+  if (!response.body) {
+    // Fallback to non-streaming path
+    const startedAt = performance.now();
+    const buffer = await response.arrayBuffer();
+    const seconds = (performance.now() - startedAt) / 1000;
+    const bytes = Math.max(buffer.byteLength, requestedBytes);
+    const mbps = (bytes * 8) / seconds / 1_000_000;
+
+    elements.downloadValue.textContent = formatMbps(mbps);
+    elements.downloadDetail.textContent = `${formatMegabytes(bytes)} transferred in ${seconds.toFixed(2)}s`;
+    updateGauge(elements.downloadGaugeFill, elements.downloadGaugeNeedle, elements.downloadGaugeCeiling, mbps, resolveGaugeCeiling(mbps, standards));
+
+    return { mbps, seconds, bytes };
+  }
+
+  const reader = response.body.getReader();
+  let received = 0;
+  const startedAt = performance.now();
+  let lastUpdate = startedAt;
+
+  // read loop
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    received += value.byteLength;
+    const now = performance.now();
+    const elapsed = (now - startedAt) / 1000;
+    const mbps = (received * 8) / elapsed / 1_000_000;
+
+    // Throttle UI updates to ~200ms
+    if (now - lastUpdate >= 160) {
+      elements.downloadValue.textContent = formatMbps(mbps);
+      elements.downloadDetail.textContent = `${formatMegabytes(received)} transferred in ${elapsed.toFixed(2)}s`;
+      updateGauge(elements.downloadGaugeFill, elements.downloadGaugeNeedle, elements.downloadGaugeCeiling, mbps, resolveGaugeCeiling(mbps, standards));
+      lastUpdate = now;
+    }
+  }
+
+  const seconds = (performance.now() - startedAt) / 1000;
+  const mbps = (received * 8) / seconds / 1_000_000;
+
+  // final update
+  elements.downloadValue.textContent = formatMbps(mbps);
+  elements.downloadDetail.textContent = `${formatMegabytes(received)} transferred in ${seconds.toFixed(2)}s`;
+  updateGauge(elements.downloadGaugeFill, elements.downloadGaugeNeedle, elements.downloadGaugeCeiling, mbps, resolveGaugeCeiling(mbps, standards));
+
+  return { mbps, seconds, bytes: received };
 }
 
-async function measureUpload(uploadPayloadBytes, uploadPasses) {
+async function measureUpload(uploadPayloadBytes, uploadPasses, standards) {
+  // build payload once
   const payload = createRandomPayload(uploadPayloadBytes);
   let totalBytes = 0;
   const startedAt = performance.now();
 
-  for (let index = 0; index < uploadPasses; index += 1) {
-    const response = await fetch(`/api/upload?r=${Date.now()}-${index}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      },
-      body: payload
+  for (let pass = 0; pass < uploadPasses; pass += 1) {
+    // Use XHR to get upload progress events
+    // eslint-disable-next-line no-undef
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/api/upload?r=${Date.now()}-${pass}`);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+      xhr.upload.onprogress = (evt) => {
+        const now = performance.now();
+        const elapsed = (now - startedAt) / 1000;
+        const bytesSoFar = totalBytes + (evt.loaded || 0);
+        const mbps = (bytesSoFar * 8) / elapsed / 1_000_000;
+
+        elements.uploadValue.textContent = formatMbps(mbps);
+        elements.uploadDetail.textContent = `${formatMegabytes(bytesSoFar)} uploaded in ${elapsed.toFixed(2)}s`;
+        updateGauge(elements.uploadGaugeFill, elements.uploadGaugeNeedle, elements.uploadGaugeCeiling, mbps, resolveGaugeCeiling(mbps, standards));
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            totalBytes += data.receivedBytes || 0;
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        } else {
+          reject(new Error('Upload failed: ' + xhr.status));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Upload network error'));
+      xhr.send(payload);
     });
-    const data = await response.json();
-    totalBytes += data.receivedBytes;
   }
 
   const seconds = (performance.now() - startedAt) / 1000;
   const mbps = (totalBytes * 8) / seconds / 1_000_000;
 
-  return {
-    mbps,
-    seconds,
-    bytes: totalBytes
-  };
+  elements.uploadValue.textContent = formatMbps(mbps);
+  elements.uploadDetail.textContent = `${formatMegabytes(totalBytes)} transferred in ${seconds.toFixed(2)}s`;
+  updateGauge(elements.uploadGaugeFill, elements.uploadGaugeNeedle, elements.uploadGaugeCeiling, mbps, resolveGaugeCeiling(mbps, standards));
+
+  return { mbps, seconds, bytes: totalBytes };
 }
 
 async function runBenchmark() {
@@ -236,27 +301,17 @@ async function runBenchmark() {
     updateGauge(elements.downloadGaugeFill, elements.downloadGaugeNeedle, elements.downloadGaugeCeiling, 0, idleGaugeCeiling);
     updateGauge(elements.uploadGaugeFill, elements.uploadGaugeNeedle, elements.uploadGaugeCeiling, 0, idleGaugeCeiling);
 
-    const download = await measureDownload(profile.downloadBytes);
+    const download = await measureDownload(profile.downloadBytes, config.standards);
+
+    // download UI already updated during streaming, ensure final values are set
     elements.downloadValue.textContent = formatMbps(download.mbps);
     elements.downloadDetail.textContent = `${formatMegabytes(download.bytes)} transferred in ${download.seconds.toFixed(2)}s`;
-    updateGauge(
-      elements.downloadGaugeFill,
-      elements.downloadGaugeNeedle,
-      elements.downloadGaugeCeiling,
-      download.mbps,
-      resolveGaugeCeiling(download.mbps, config.standards)
-    );
 
-    const upload = await measureUpload(profile.uploadPayloadBytes, config.uploadPasses);
+    const upload = await measureUpload(profile.uploadPayloadBytes, config.uploadPasses, config.standards);
+
+    // upload UI already updated during streaming, ensure final values are set
     elements.uploadValue.textContent = formatMbps(upload.mbps);
     elements.uploadDetail.textContent = `${formatMegabytes(upload.bytes)} transferred in ${upload.seconds.toFixed(2)}s`;
-    updateGauge(
-      elements.uploadGaugeFill,
-      elements.uploadGaugeNeedle,
-      elements.uploadGaugeCeiling,
-      upload.mbps,
-      resolveGaugeCeiling(upload.mbps, config.standards)
-    );
 
     elements.verdictText.textContent = getTierLabel(download.mbps, upload.mbps);
     renderSummary(download.mbps, upload.mbps);

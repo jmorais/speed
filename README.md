@@ -47,11 +47,11 @@ docker compose up --build -d
 ## Environment variables
 
 - `PORT`: HTTP port, default `3000`
-- `DOWNLOAD_CHUNK_SIZE`: bytes per server chunk, default `65536`
-- `DOWNLOAD_CHUNKS`: number of chunks streamed to the browser, default `256`
-- `UPLOAD_PAYLOAD_BYTES`: bytes sent per upload pass, default `4194304`
-- `UPLOAD_PASSES`: number of upload passes, default `3`
-- `UPLOAD_LIMIT_MB`: maximum accepted upload size in MB, default `128`
+-- `DOWNLOAD_CHUNK_SIZE`: bytes per server chunk, default `65536`
+-- `DOWNLOAD_CHUNKS`: number of chunks streamed to the browser, default `4000` (to support 250 MiB)
+-- `UPLOAD_PAYLOAD_BYTES`: bytes sent per upload pass, default `262144000` (250 MiB)
+-- `UPLOAD_PASSES`: number of upload passes, default `1`
+-- `UPLOAD_LIMIT_MB`: maximum accepted upload size in MB, default `512`
 
 ## Notes on measurement
 

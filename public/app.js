@@ -16,7 +16,7 @@ const elements = {
 };
 
 let configCache = null;
-const FIXED_TEST_BYTES = 250 * 1024 * 1024;
+const FIXED_TEST_BYTES = 100 * 1024 * 1024;
 // Minimum sample interval (seconds) to avoid divide-by-near-zero spikes
 const MIN_SAMPLE_INTERVAL = 0.06;
 
@@ -176,10 +176,6 @@ async function loadConfig() {
   return configCache;
 }
 
-// ─── PATCH: measureDownload ───────────────────────────────────────────────────
-// Fix: cancelAnimationFrame before writing final values so a pending rAF
-// callback can't overwrite the correct overall-average speed.
-
 async function measureDownload(requestedBytes, standards) {
   const response = await fetch(`/api/download?bytes=${requestedBytes}&r=${Date.now()}`, {
     cache: 'no-store'
@@ -191,13 +187,11 @@ async function measureDownload(requestedBytes, standards) {
     const seconds = (performance.now() - startedAt) / 1000;
     const bytes = Math.max(buffer.byteLength, requestedBytes);
     const mbps = (bytes * 8) / seconds / 1_000_000;
-
     elements.downloadValue.textContent = formatMbps(mbps);
     elements.downloadDetail.textContent = `${formatMegabytes(bytes)} transferred in ${seconds.toFixed(2)}s`;
     updateGauge(
       elements.downloadGaugeFill, elements.downloadGaugeNeedle,
-      elements.downloadGaugeCeiling, mbps,
-      resolveGaugeCeiling(mbps, standards)
+      elements.downloadGaugeCeiling, mbps, resolveGaugeCeiling(mbps, standards)
     );
     return { mbps, seconds, bytes };
   }
@@ -206,8 +200,14 @@ async function measureDownload(requestedBytes, standards) {
   let received = 0;
   const startedAt = performance.now();
 
-  let lastSampleBytes = 0;
-  let lastSampleTime = null;          // ✅ lazy — set on first chunk
+  // Accumulating sample window: instead of measuring speed per-chunk (which
+  // underestimates on fast connections where chunks arrive every 1–2 ms and
+  // the old MIN_SAMPLE_INTERVAL clamp deflated the result), we accumulate
+  // bytes until at least MIN_SAMPLE_INTERVAL has elapsed, then take one
+  // measurement over the whole window. No clamping needed.
+  let windowStartBytes = 0;
+  let windowStartTime = null;   // lazy — avoids counting connection latency
+
   let smoothedMbps = 0;
   const SMOOTHING_ALPHA = 0.25;
   let rafId = null;
@@ -215,7 +215,7 @@ async function measureDownload(requestedBytes, standards) {
   let ceilingMbps = resolveGaugeCeiling(0, standards);
 
   const updateDisplay = () => {
-    rafId = null;             // ✅ cleared here (not via a separate rafPending flag)
+    rafId = null;
     const elapsed = (performance.now() - startedAt) / 1000;
     elements.downloadValue.textContent = formatMbps(displayMbps);
     elements.downloadDetail.textContent = `${formatMegabytes(received)} transferred in ${elapsed.toFixed(2)}s`;
@@ -232,34 +232,37 @@ async function measureDownload(requestedBytes, standards) {
     received += value.byteLength;
     const now = performance.now();
 
-    // ✅ skip speed calculation until we have two real data points
-    if (lastSampleTime === null) {
-      lastSampleTime = now;
-      lastSampleBytes = received;
+    if (windowStartTime === null) {
+      // First byte: start the window, nothing to measure yet.
+      windowStartTime = now;
+      windowStartBytes = received;
       if (rafId === null) rafId = requestAnimationFrame(updateDisplay);
       continue;
     }
 
-    const deltaBytes = received - lastSampleBytes;
-    const rawDeltaSeconds = (now - lastSampleTime) / 1000;
-    const deltaSeconds = Math.max(rawDeltaSeconds, MIN_SAMPLE_INTERVAL);
-    const instMbps = (deltaBytes * 8) / deltaSeconds / 1_000_000;
+    const windowSeconds = (now - windowStartTime) / 1000;
 
-    smoothedMbps = (smoothedMbps === 0)
-      ? instMbps
-      : smoothedMbps * (1 - SMOOTHING_ALPHA) + instMbps * SMOOTHING_ALPHA;
+    if (windowSeconds >= MIN_SAMPLE_INTERVAL) {
+      // Enough time has elapsed — measure over the whole accumulated window.
+      const windowBytes = received - windowStartBytes;
+      const instMbps = (windowBytes * 8) / windowSeconds / 1_000_000;
 
-    lastSampleBytes = received;
-    lastSampleTime = now;
-    displayMbps = smoothedMbps;
+      smoothedMbps = smoothedMbps === 0
+        ? instMbps
+        : smoothedMbps * (1 - SMOOTHING_ALPHA) + instMbps * SMOOTHING_ALPHA;
 
-    const newCeiling = resolveGaugeCeiling(displayMbps, standards);
-    if (newCeiling > ceilingMbps) ceilingMbps = newCeiling;
+      windowStartBytes = received;
+      windowStartTime = now;
+
+      displayMbps = smoothedMbps;
+
+      const newCeiling = resolveGaugeCeiling(displayMbps, standards);
+      if (newCeiling > ceilingMbps) ceilingMbps = newCeiling;
+    }
 
     if (rafId === null) rafId = requestAnimationFrame(updateDisplay);
   }
 
-  // ✅ FIX: cancel any pending rAF before writing the final values
   if (rafId !== null) {
     cancelAnimationFrame(rafId);
     rafId = null;
@@ -272,8 +275,7 @@ async function measureDownload(requestedBytes, standards) {
   elements.downloadDetail.textContent = `${formatMegabytes(received)} transferred in ${seconds.toFixed(2)}s`;
   updateGauge(
     elements.downloadGaugeFill, elements.downloadGaugeNeedle,
-    elements.downloadGaugeCeiling, mbps,
-    resolveGaugeCeiling(mbps, standards)
+    elements.downloadGaugeCeiling, mbps, resolveGaugeCeiling(mbps, standards)
   );
 
   return { mbps, seconds, bytes: received };

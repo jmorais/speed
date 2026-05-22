@@ -8,7 +8,7 @@ const host = process.env.HOST || '0.0.0.0';
 const downloadChunkSize = Number(process.env.DOWNLOAD_CHUNK_SIZE || 64 * 1024);
 const downloadChunks = Number(process.env.DOWNLOAD_CHUNKS || 4000);
 const uploadLimitMb = Number(process.env.UPLOAD_LIMIT_MB || 512);
-const uploadPayloadBytes = Number(process.env.UPLOAD_PAYLOAD_BYTES || 250 * 1024 * 1024);
+const uploadPayloadBytes = Number(process.env.UPLOAD_PAYLOAD_BYTES || 100 * 1024 * 1024);
 const uploadPasses = Number(process.env.UPLOAD_PASSES || 1);
 const maxDownloadBytes = downloadChunkSize * downloadChunks;
 

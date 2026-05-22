@@ -207,10 +207,10 @@ async function measureDownload(requestedBytes, standards) {
   const startedAt = performance.now();
 
   let lastSampleBytes = 0;
-  let lastSampleTime = startedAt;
+  let lastSampleTime = null;          // ✅ lazy — set on first chunk
   let smoothedMbps = 0;
   const SMOOTHING_ALPHA = 0.25;
-  let rafId = null;          // ✅ FIX: track the rAF id so we can cancel it
+  let rafId = null;
   let displayMbps = 0;
   let ceilingMbps = resolveGaugeCeiling(0, standards);
 
@@ -232,16 +232,22 @@ async function measureDownload(requestedBytes, standards) {
     received += value.byteLength;
     const now = performance.now();
 
+    // ✅ skip speed calculation until we have two real data points
+    if (lastSampleTime === null) {
+      lastSampleTime = now;
+      lastSampleBytes = received;
+      if (rafId === null) rafId = requestAnimationFrame(updateDisplay);
+      continue;
+    }
+
     const deltaBytes = received - lastSampleBytes;
     const rawDeltaSeconds = (now - lastSampleTime) / 1000;
     const deltaSeconds = Math.max(rawDeltaSeconds, MIN_SAMPLE_INTERVAL);
     const instMbps = (deltaBytes * 8) / deltaSeconds / 1_000_000;
 
-    if (!Number.isFinite(smoothedMbps) || smoothedMbps === 0) {
-      smoothedMbps = instMbps;
-    } else {
-      smoothedMbps = smoothedMbps * (1 - SMOOTHING_ALPHA) + instMbps * SMOOTHING_ALPHA;
-    }
+    smoothedMbps = (smoothedMbps === 0)
+      ? instMbps
+      : smoothedMbps * (1 - SMOOTHING_ALPHA) + instMbps * SMOOTHING_ALPHA;
 
     lastSampleBytes = received;
     lastSampleTime = now;
@@ -250,9 +256,7 @@ async function measureDownload(requestedBytes, standards) {
     const newCeiling = resolveGaugeCeiling(displayMbps, standards);
     if (newCeiling > ceilingMbps) ceilingMbps = newCeiling;
 
-    if (rafId === null) {
-      rafId = requestAnimationFrame(updateDisplay);
-    }
+    if (rafId === null) rafId = requestAnimationFrame(updateDisplay);
   }
 
   // ✅ FIX: cancel any pending rAF before writing the final values

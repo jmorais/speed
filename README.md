@@ -46,8 +46,8 @@ docker compose up --build -d
 
 ## Environment variables
 
--- `DOWNLOAD_CHUNKS`: number of chunks streamed to the browser, default `4000` (to support 100 MiB)
--- `UPLOAD_PAYLOAD_BYTES`: bytes sent per upload pass, default `104857600` (100 MiB)
+-- `DOWNLOAD_CHUNKS`: number of chunks streamed to the browser, default `4800` (to support 300 MiB)
+-- `UPLOAD_PAYLOAD_BYTES`: bytes sent per upload pass, default `314572800` (300 MiB)
 
 ## Notes on measurement
 
